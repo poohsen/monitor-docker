@@ -1,39 +1,37 @@
 ########## How To Use Docker Image ###############
 ##
-##  Image Name: denny/monitor-docker-slack:latest
-##  Git link: https://github.com/DennyZhang/monitor-docker-slack/blob/master/Dockerfile
+##  Image Name: poohsen/monitor-docker:latest
+##  Git link: https://github.com/DennyZhang/monitor-docker/blob/master/Dockerfile
 ##  Docker hub link:
-##  Build docker image: docker build --no-cache -t denny/monitor-docker-slack:latest --rm=true .
+##  Build docker image: docker build --no-cache -t poohsen/monitor-docker:latest --rm=true .
 ##  How to use:
-##      https://github.com/DennyZhang/monitor-docker-slack/blob/master/README.md
+##      https://github.com/poohsen/monitor-docker/blob/main/README.md
 ##
-##  Description: Send slack alerts, if any containers run into unhealthy
+##  Description: Send alerts if any containers run into unhealthy
 ##
-##  Read more: https://www.dennyzhang.com/docker_monitor
 ##################################################
 # Base Docker image: https://hub.docker.com/_/python/
 
 FROM python:3.6.2-jessie
 
-ENV SLACK_CHANNEL ""
-ENV SLACK_TOKEN ""
+ENV IFTTT_EVENT_NAME ""
+ENV IFTTT_SERVICE_KEY ""
 
 ENV MSG_PREFIX ""
 ENV WHITE_LIST ""
 # seconds
 ENV CHECK_INTERVAL "300"
 
-LABEL maintainer="Denny<https://www.dennyzhang.com/contact>"
 
 USER root
 WORKDIR /
-ADD monitor-docker-slack.py /monitor-docker-slack.py
-ADD monitor-docker-slack.sh /monitor-docker-slack.sh
+ADD monitor-docker.py /monitor-docker.py
+ADD ifttt.py /ifttt.py
+ADD monitor-docker.sh /monitor-docker.sh
 
 RUN chmod o+x /*.sh && chmod o+x /*.py && \
     pip install -r requirements.txt && \
 # Verify docker image
-    pip show requests-unixsocket | grep "0.1.5" && \
-    pip show slackclient | grep "1.3.0"
+    pip show requests-unixsocket | grep "0.1.5" 
 
-ENTRYPOINT ["/monitor-docker-slack.sh"]
+ENTRYPOINT ["/monitor-docker.sh"]

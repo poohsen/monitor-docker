@@ -1,15 +1,9 @@
-<a href="https://github.com/DennyZhang?tab=followers"><img align="right" width="200" height="183" src="https://raw.githubusercontent.com/USDevOps/mywechat-slack-group/master/images/fork_github.png" /></a>
 
-[![Build Status](https://travis-ci.org/dennyzhang/monitor-docker-slack.svg?branch=master)](https://travis-ci.org/dennyzhang/monitor-docker-slack) [![Docker](https://raw.githubusercontent.com/USDevOps/mywechat-slack-group/master/images/docker.png)](https://hub.docker.com/r/denny/monitor-docker-slack/)
-
-[![LinkedIn](https://raw.githubusercontent.com/USDevOps/mywechat-slack-group/master/images/linkedin_icon.png)](https://www.linkedin.com/in/dennyzhang001) [![Github](https://raw.githubusercontent.com/USDevOps/mywechat-slack-group/master/images/github.png)](https://github.com/DennyZhang) <a href="https://www.dennyzhang.com/slack" target="_blank" rel="nofollow"><img src="http://slack.dennyzhang.com/badge.svg" alt="slack"/></a>
-
-- File me [tickets](https://github.com/DennyZhang/monitor-docker-slack/issues) or star [the repo](https://github.com/DennyZhang/monitor-docker-slack)
 
 # Introduction
-Get Slack Notifications, When Containers Run Into Issues
+Get IFTTT Notifications When Containers Run Into Issues
 
-Read more: https://www.dennyzhang.com/docker_monitor
+Forked from the slack-based version: https://github.com/DennyZhang/monitor-docker-slack
 
 # General Idea
 1. Start a container in the target docker host.
@@ -17,31 +11,34 @@ Read more: https://www.dennyzhang.com/docker_monitor
 
 ```curl -XGET --unix-socket /var/run/docker.sock http://localhost/containers/json```
 
-3. Send slack notifications, we get matched of "unhealthy"
+3. Send notifications when container status is "unhealthy"
+
+# How To Use
+- set up a IFTTT webhook applet to e.g. get a notification on your android phone from the IFTTT app
+- in the notification text put `{{Value1}}` 
+- make note of the event name and service key
 
 # How To Use: Plain Container
-- Specify slack credentials via env
+- Specify IFTTT credentials via env
 
 ```
-export SLACK_CHANNEL="#XXX"
-export SLACK_USERNAME="XXX"
-export SLACK_TOKEN="xoxp-XXX-XXX-XXX-XXXXXXXX"
+export IFTTT_EVENT_NAME="#XXX"
+export IFTTT_SERVICE_KEY="XXX"
 export MSG_PREFIX="Monitoring On XX.XX.XX.XX"
 ```
 
 - Start container to check
 ```
-container_name="monitor-docker-slack"
+container_name="monitor-docker"
 # Stop and delete existing container
 docker stop $container_name; docker rm "$container_name"
 
 # Start container to monitor docker healthcheck status
 docker run -v /var/run/docker.sock:/var/run/docker.sock \
    -t -d -h $container_name --name $container_name \
-   -e SLACK_CHANNEL="$SLACK_CHANNEL" -e SLACK_USERNAME="$SLACK_USERNAME" \
-   -e SLACK_TOKEN="$SLACK_TOKEN" -e MSG_PREFIX="$MSG_PREFIX" \
-   -e WHITE_LIST="$WHITE_LIST" --restart=always \
-   denny/monitor-docker-slack:latest
+   -e IFTTT_EVENT_NAME="$IFTTT_EVENT_NAME" -e IFTTT_SERVICE_KEY="$IFTTT_SERVICE_KEY" \
+   -e MSG_PREFIX="$MSG_PREFIX" -e WHITE_LIST="$WHITE_LIST" --restart=always \
+   poohsen/monitor-docker:latest
 
 # Check status
 docker logs "$container_name"
@@ -51,15 +48,14 @@ docker logs "$container_name"
 ```
 version: '2'
 services:
-  monitor-docker-slack:
-    container_name: monitor-docker-slack
-    image: denny/monitor-docker-slack:latest
+  monitor-docker:
+    container_name: monitor-docker
+    image: poohsen/monitor-docker:latest
     volumes:
      - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      SLACK_CHANNEL: "#XXX"
-      SLACK_USERNAME: "XXX"
-      SLACK_TOKEN: "xoxp-XXX-XXX-XXX-XXXXXXXX"
+      IFTTT_EVENT_NAME: "#XXX"
+      IFTTT_SERVICE_KEY: "XXX"
       MSG_PREFIX: "Monitoring On XX.XX.XX.XX"
     restart: always
 ```
@@ -67,15 +63,12 @@ services:
 # More customization
 - Add message prefix for the slack notification
 ```
-export MSG_PREFIX="Docker Env in Denny's env"
+export MSG_PREFIX="Notification: "
 ```
-<a href="https://www.dennyzhang.com"><img src="https://raw.githubusercontent.com/DennyZhang/monitor-docker-slack/master/images/slack_prefix.png"/> </a>
 
 - Skip checking certain containers by customizing WHITE_LIST env.
 ```
-export MSG_PREFIX="Docker Env in Denny's env"
 export WHITE_LIST="nodeexporter,ngin.*"
 ```
-<a href="https://www.dennyzhang.com"><img src="https://raw.githubusercontent.com/DennyZhang/monitor-docker-slack/master/images/slack_whitelist.png"/> </a>
 
 Code is licensed under [MIT License](https://www.dennyzhang.com/wp-content/mit_license.txt).

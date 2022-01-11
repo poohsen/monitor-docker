@@ -4,20 +4,19 @@
 # Licensed under MIT
 #   https://www.dennyzhang.com/wp-content/mit_license.txt
 #
-# File : monitor-docker-slack.py
-# Author : Denny <https://www.dennyzhang.com/contact>
-# Description :
+# File : monitor-docker.py
+# Author : Denny <https://www.dennyzhang.com/contact>, poohsen <https://github.com/poohsen>
 # --
 # Created : <2017-08-20>
-# Updated: Time-stamp: <2017-11-13 11:00:53>
+# Updated: Time-stamp: <2022-01-11 16:00:53>
 # -------------------------------------------------------------------
 import argparse
 import json
 import re
 import time
+from ifttt import *
 
 import requests_unixsocket
-from slackclient import SlackClient
 
 
 def name_in_list(name, name_pattern_list):
@@ -75,7 +74,7 @@ def container_list_to_str(container_list):
     return msg
 
 
-def monitor_docker_slack(docker_sock_file, white_pattern_list):
+def monitor_docker(docker_sock_file, white_pattern_list):
     container_list = list_containers_by_sock(docker_sock_file)
     stopped_container_list = get_stopped_containers(container_list)
     unhealthy_container_list = get_unhealthy_containers(container_list)
@@ -97,13 +96,13 @@ def monitor_docker_slack(docker_sock_file, white_pattern_list):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--slack_token', required=True, help="Slack Token.", type=str)
-    parser.add_argument('--slack_channel', required=True, help="Slack channel to get alerts.", type=str)
+    parser.add_argument('--ifttt_event_name', required=True, help="IFTTT event name.", type=str)
+    parser.add_argument('--ifttt_service_key', required=True, help="IFTTT service key.", type=str)
     parser.add_argument('--whitelist', default='', required=False,
                         help="Skip checking certain containers. A list of regexp separated by comma.", type=str)
     parser.add_argument('--check_interval', default='300', required=False, help="Periodical check. By seconds.",
                         type=int)
-    parser.add_argument('--msg_prefix', default='', required=False, help="Slack message prefix.", type=str)
+    parser.add_argument('--msg_prefix', default='', required=False, help="Notification message prefix.", type=str)
     l = parser.parse_args()
     check_interval = l.check_interval
     white_pattern_list = l.whitelist.split(',')
@@ -111,37 +110,31 @@ if __name__ == '__main__':
     if white_pattern_list == ['']:
         white_pattern_list = []
 
-    slack_channel = l.slack_channel
-    slack_token = l.slack_token
+    ifttt_event_name = l.ifttt_event_name
+    ifttt_service_key = l.ifttt_service_key
     msg_prefix = l.msg_prefix
 
-    if slack_channel == '':
-        print("Warning: Please provide slack channel, to receive alerts properly.")
-    if slack_token == '':
-        print("Warning: Please provide slack token.")
+    if ifttt_event_name == '':
+        print("Warning: Please provide IFTTT event name.")
+    if ifttt_service_key == '':
+        print("Warning: Please provide IFTTT service key.")
 
-    slack_client = SlackClient(slack_token)
 
-    # TODO
-    slack_username = "@denny"
-
-    has_send_error_alert = False
+    has_sent_error_alert = False
     while True:
-        (status, err_msg) = monitor_docker_slack("/var/run/docker.sock", white_pattern_list)
+        (status, status_msg) = monitor_docker("/var/run/docker.sock", white_pattern_list)
         if msg_prefix != "":
-            err_msg = "%s\n%s" % (msg_prefix, err_msg)
-        print("%s: %s" % (status, err_msg))
+            status_msg = "%s\n%s" % (msg_prefix, status_msg)
+        print("%s: %s" % (status, status_msg))
+
         if status == "OK":
-            if has_send_error_alert is True:
-                slack_client.api_call("chat.postMessage", user=slack_username, as_user=False, channel=slack_channel,
-                                      text=err_msg)
-                has_send_error_alert = False
+            if has_sent_error_alert is True:
+                has_sent_error_alert = False
         else:
-            if has_send_error_alert is False:
-                slack_client.api_call("chat.postMessage", user=slack_username, as_user=False, channel=slack_channel,
-                                      text=err_msg)
+            if has_sent_error_alert is False:
+                notify_via_ifttt(ifttt_event_name, ifttt_service_key, status_msg)
                 # avoid send alerts over and over again
-                has_send_error_alert = True
+                has_sent_error_alert = True
         time.sleep(check_interval)
-# File : monitor-docker-slack.py ends
+# File : monitor-docker.py ends
 
